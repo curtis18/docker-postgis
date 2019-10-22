@@ -1,19 +1,21 @@
 #!/usr/bin/env bash
 
-DATADIR="/var/lib/postgresql/11/main"
-ROOT_CONF="/etc/postgresql/11/main"
+DATADIR="/var/lib/postgresql/12/main"
+ROOT_CONF="/etc/postgresql/12/main"
+PG_ENV="$ROOT_CONF/environment"
 CONF="$ROOT_CONF/postgresql.conf"
 WAL_ARCHIVE="/opt/archivedir"
 RECOVERY_CONF="$ROOT_CONF/recovery.conf"
-POSTGRES="/usr/lib/postgresql/11/bin/postgres"
-INITDB="/usr/lib/postgresql/11/bin/initdb"
-SQLDIR="/usr/share/postgresql/11/contrib/postgis-2.5/"
+POSTGRES="/usr/lib/postgresql/12/bin/postgres"
+INITDB="/usr/lib/postgresql/12/bin/initdb"
+SQLDIR="/usr/share/postgresql/12/contrib/postgis-3.0/"
 SETVARS="POSTGIS_ENABLE_OUTDB_RASTERS=1 POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL"
 LOCALONLY="-c listen_addresses='127.0.0.1'"
 PG_BASEBACKUP="/usr/bin/pg_basebackup"
 PROMOTE_FILE="/tmp/pg_promote_master"
 PGSTAT_TMP="/var/run/postgresql/"
-PG_PID="/var/run/postgresql/11-main.pid"
+PG_PID="/var/run/postgresql/12-main.pid"
+
 
 # Make sure we have a user set up
 if [ -z "${POSTGRES_USER}" ]; then
@@ -59,8 +61,17 @@ if [ -z "${MAINTAINANCE_WORKERS}" ]; then
 fi
 
 if [ -z "${WAL_SIZE}" ]; then
-	WAL_SIZE=2GB
+	WAL_SIZE=4GB
 fi
+
+if [ -z "${MIN_WAL_SIZE}" ]; then
+	MIN_WAL_SIZE=2048MB
+fi
+
+if [ -z "${WAL_SEGSIZE}" ]; then
+	WAL_SEGSIZE=1024
+fi
+
 
 if [ -z "${CHECK_POINT_TIMEOUT}" ]; then
 	CHECK_POINT_TIMEOUT=30min
@@ -70,8 +81,8 @@ if [ -z "${MAX_WORKERS}" ]; then
 	MAX_WORKERS=4
 fi
 
-if [ -z "${WORK_MEM}" ]; then
-	WORK_MEM=128MB
+if [ -z "${MAINTAINANCE_WORK_MEM}" ]; then
+	MAINTAINANCE_WORK_MEM=128MB
 fi
 
 
@@ -84,7 +95,36 @@ if [ -z "${SSL_KEY_FILE}" ]; then
 fi
 
 if [ -z "${POSTGRES_MULTIPLE_EXTENSIONS}" ]; then
-  POSTGRES_MULTIPLE_EXTENSIONS='postgis,hstore,postgis_topology'
+  POSTGRES_MULTIPLE_EXTENSIONS='postgis,hstore,postgis_topology,postgis_raster'
+fi
+
+if [ -z "${ALLOW_IP_RANGE}" ]; then
+  ALLOW_IP_RANGE='0.0.0.0/0'
+fi
+if [ -z "${DEFAULT_ENCODING}" ]; then
+  DEFAULT_ENCODING="UTF8"
+fi
+if [ -z "${DEFAULT_COLLATION}" ]; then
+  DEFAULT_COLLATION="en_US.UTF-8"
+fi
+if [ -z "${DEFAULT_CTYPE}" ]; then
+  DEFAULT_CTYPE="en_US.UTF-8"
+fi
+
+if [ -z "${TARGET_TIMELINE}" ]; then
+	TARGET_TIMELINE='latest'
+fi
+
+if [ -z "${TARGET_ACTION}" ]; then
+	TARGET_ACTION='promote'
+fi
+
+if [ -z "${REPLICATION_USER}" ]; then
+  REPLICATION_USER=replicator
+fi
+
+if [ -z "${REPLICATION_PASS}" ]; then
+  REPLICATION_PASS=replicator
 fi
 # Compatibility with official postgres variable
 # Official postgres variable gets priority
